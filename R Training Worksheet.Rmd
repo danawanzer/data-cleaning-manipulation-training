@@ -1,0 +1,163 @@
+---
+title: "R Stats Training"
+author: "DLW"
+date: "1/22/2019"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install (if necessary) the following packages
+library(tidyverse)
+library(psych) #used for the bfi dataset
+library(summarytools) #used for dfSummary()
+library(janitor) #used for tabyl()
+
+#Load in the bfi dataset
+data(bfi)
+describe(bfi)
+```
+
+# summarytools
+
+```{r}
+#What are some ways we can view the dataset, or a summary of the dataset, that you know of right now? 
+
+
+# How can we use summarytools to view the dataset?
+
+```
+
+# dplyr
+
+## select
+
+```{r}
+# select only the 25 BFI variables 
+
+
+# select only the Extraversion items
+
+```
+
+## filter
+
+```{r}
+# remove (filter out) anybody missing gender, education, and age data
+
+
+# find out how many people in the dataset are male, at least finished high school, and are older than 18. Hint: ??bfi
+
+
+# find out how many people in the dataset are female and have a graduate degree. Hint: ??bfi
+
+
+# Extra credit: Not part of the filter verb, but how would you remove ANY rows with missing data? Hint: Google is your friend!
+
+```
+
+## arrange
+
+```{r}
+# sort age to find the youngest and then oldest people in the dataset
+
+
+# Extra credit: sort education so the missing values are at the top. Hint: use is.na()
+
+
+# Extra credit: sort data so that the people with the highest average score on A1 and C1 are at the top
+
+```
+
+## mutate
+
+```{r}
+# find out what year (ish) people were born based on their age, assuming this was collected in 2010. Bonus: use the pipe!
+
+
+# create means for each subscale and the overall scale (assume they are already reverse-coded or do the extra credit below first before creating means)
+
+
+# change gender and education to factors and store that back into the bfi dataset (or a new dataset if you prefer)
+
+
+# EXTRA CREDIT: reverse-code the correct items (hint: mutate_at)
+
+
+# EXTRA CREDIT: recode all the BFI items into factors (hint: mutate_at)
+
+```
+
+## summarise
+
+```{r}
+# summarise all the bfi items by the mean
+
+
+# summarise all the bfi items by mean for both males and females
+
+
+# EXTRA CREDIT: use the means of the subscales you created above and calculate the mean and sd by education and gender COMBINED
+
+
+```
+
+
+# tidyr
+
+## gather and spread
+
+```{r}
+# gather everything in the bfi dataset
+
+
+# gather everything but the three demographic variables
+
+
+# gather everything, store into a new dataset, and then spread it back to the original. HINT: You'll likely get an error about duplicate identifiers for rows. Why? Because tidyr (and most of the tidyverse) doesn't like datasets with row names. First, pull out the rownames by doing bfi <- rownames_to_column(bfi) and then make sure you pull out the ID when you gather. 
+
+```
+
+## unite and separate
+
+```{r}
+# unite age, education, and gender using an underscore and call the new column "pseudoID". 
+
+
+# unite age, education, and gender using an underscore and call the new column "pseudoID". Then separate that column back. It should be back to the original.
+
+```
+
+# Putting it all together
+
+```{r}
+# select only the 25 bfi items, and summarise them all (mean, sd, min, max). 
+# HINT: read the summarise_all page on the tidyverse to use the list and purrr commands. 
+# HINT: you'll need to use gather, separate, and spread to rearrange the dataset like you need it!
+
+```
+
+
+# janitor
+
+```{r}
+# Create a table of the valid percentage of education. There should be no NA row. 
+# BONUS: How would you round to whole percentages?
+# BONUS: How would you add percentage signs?
+# BONUS: How would you get rid of the `n` column? 
+
+
+# Create a table of education by gender. Remove NAs. Have total rows and columns. Have both the n and the % (by row) in each cell.
+# BONUS: How would you quickly relabel the `1` and `2` to be Male and Female?
+
+```
+
+# Bonus/Extra Credit
+
+```{r}
+# Create a table with the n, mean, and frequency of the values for the five items of the Extraversion subscale. Do not include NA values.
+# Hint: you'll need to create multiple tables and combine them!
+# Bonus: Round the Mean to 2 decimal points
+
+```
+
