@@ -1,0 +1,288 @@
+---
+title: "R Stats Training"
+author: "DLW"
+date: "1/22/2019"
+output: html_notebook
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install (if necessary) the following packages
+library(tidyverse)
+library(psych) #used for the bfi dataset
+library(summarytools) #used for dfSummary()
+library(janitor) #used for tabyl()
+
+#Load in the bfi dataset
+data(bfi)
+describe(bfi)
+```
+
+# summarytools
+
+```{r}
+#What are some ways we can view the dataset, or a summary of the dataset, that you know of right now? 
+View(bfi) #note the uppercase v
+base::summary(bfi)
+psych::describe(bfi)
+dplyr::glimpse(bfi)
+
+# How can we use summarytools to view the dataset?
+summarytools::dfSummary(bfi) #Why does it look funky? It doesn't work in Rmd (yet!) so we need to wrap it in view() to see it in the Viewer tab
+view(dfSummary(bfi)) #note the lowercase v
+```
+
+# dplyr
+
+## select
+
+```{r}
+# select only the 25 BFI variables 
+select(bfi, ends_with("1"), ends_with("2"), ends_with("3"), ends_with("4"), ends_with("5"))
+select(bfi, 1:25)
+select(bfi, -gender, -education, -age)
+select(bfi, starts_with("A"), starts_with("c"), starts_with("E"), starts_with("N"), starts_with("O")) #doesn't work because of age and education!
+select(bfi, num_range("O", 1:5), num_range("C", 1:5), num_range("E", 1:5), num_range("A", 1:5), num_range("N", 1:5)) #extra credit answer!
+
+# select only the Extraversion items
+select(bfi, starts_with("E"), -education)
+```
+
+## filter
+
+```{r}
+# remove (filter out) anybody missing gender, education, and age data
+filter(bfi, !is.na(education))
+filter(bfi, !is.na(gender) & !is.na(education) & !is.na(age)) #Note, no actual missing with gender and age! How could we check this?
+
+# find out how many people in the dataset are male, at least finished high school, and are older than 18. Hint: ??bfi
+filter(bfi, gender == 1 & education >= 2, age >= 18) #742 people
+
+# find out how many people in the dataset are female and have a graduate degree. Hint: ??bfi
+filter(bfi, gender == 2 & education == 5) #266 people!
+
+# Extra credit: Not part of the filter verb, but how would you remove ANY rows with missing data? Hint: Google is your friend!
+drop_na(bfi) #part of the tidyr package
+```
+
+## arrange
+
+```{r}
+# sort age to find the youngest and then oldest people in the dataset
+arrange(bfi, age) #Youngest is 3! Seriously?!
+arrange(bfi, desc(age)) #Oldest is 86!
+
+# Extra credit: sort education so the missing values are at the top. Hint: use is.na()
+arrange(bfi, desc(is.na(education)))
+
+# Extra credit: sort data so that the people with the highest average score on A1 and C1 are at the top
+arrange(bfi, desc((A1 + C1)/2))
+```
+
+## mutate
+
+```{r}
+# find out what year (ish) people were born based on their age, assuming this was collected in 2010. Bonus: use the pipe!
+bfi %>% transmute(year_born = 2010 - age)
+bfi %>% mutate(year_born = 2010 - age) %>% select(year_born)
+
+# create means for each subscale and the overall scale (assume they are already reverse-coded or do the extra credit below first before creating means)
+bfi %>%
+  select(-age, -education, -gender) %>%
+  transmute(A = rowMeans(.[startsWith(names(.), "A")], na.rm = TRUE),
+            C = rowMeans(.[startsWith(names(.), "C")], na.rm = TRUE),
+            E = rowMeans(.[startsWith(names(.), "E")], na.rm = TRUE),
+            N = rowMeans(.[startsWith(names(.), "N")], na.rm = TRUE),
+            O = rowMeans(.[startsWith(names(.), "O")], na.rm = TRUE)) %>%
+  mutate_all(round, 2) %>%
+  mutate(BFI = rowMeans(., na.rm = TRUE))
+
+# change gender and education to factors and store that back into the bfi dataset (or a new dataset if you prefer)
+bfi <- 
+  bfi %>%
+  mutate(gender = factor(gender, labels = c("Male", "Female")),
+         education = factor(education, labels = c("HS",
+                                                  "Finished HS",
+                                                  "Some college",
+                                                  "College graduate",
+                                                  "Graduate degree")))
+
+# EXTRA CREDIT: reverse-code the correct items (hint: mutate_at)
+bfi2 <-
+  bfi %>%
+  mutate_at(.vars = vars(A1, C4, C5, E1, E2, O2, O5),
+            .funs = funs(recode(., `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)))
+
+# EXTRA CREDIT: recode all the BFI items into factors (hint: mutate_at)
+bfi2 <-
+  bfi2 %>%
+  mutate_at(vars(1:25),
+            .funs = funs(factor(., ordered = TRUE,
+                                labels = c("Very inaccurate",
+                                           "Moderately inaccurate",
+                                           "Slightly inaccurate",
+                                           "Slightly accurate",
+                                           "Moderately accurate",
+                                           "Very accurate"))))
+```
+
+## summarise
+
+```{r}
+# summarise all the bfi items by the mean
+bfi %>%
+  select(-age, -gender, -education) %>%
+  summarise_all(mean, na.rm = TRUE)
+
+# summarise all the bfi items by mean for both males and females
+bfi %>%
+  select(-age, -education) %>%
+  group_by(gender) %>%
+  summarise_all(mean, na.rm = TRUE)
+
+# EXTRA CREDIT: use the means of the subscales you created above and calculate the mean and sd by education and gender COMBINED
+bfi %>%
+  mutate(A = rowMeans(.[c(1:5)], na.rm = TRUE),
+         C = rowMeans(.[c(6:10)], na.rm = TRUE),
+         E = rowMeans(.[c(11:15)], na.rm = TRUE),
+         N = rowMeans(.[c(16:20)], na.rm = TRUE),
+         O = rowMeans(.[c(21:25)], na.rm = TRUE)) %>%
+  select(A, C, E, N, O, gender, education) %>%
+  group_by(education, gender) %>%
+  summarise_all(mean, na.rm = TRUE)
+
+```
+
+
+# tidyr
+
+## tutorial
+
+```{r}
+gather(bfi)
+gather(bfi, key = "var", value = "value")
+gather(bfi, var, value)
+
+gather(bfi, var, value, -gender)
+
+gather(bfi, var, value, -gender, -education, -age)
+
+# tidyr gets more powerful when combined with other tidyverse packages
+bfi %>%
+  gather(-gender, -age, -education, key = "var", value = "value") %>% #tidyr
+  ggplot(aes(value)) + #ggplot2
+  geom_bar() + 
+  facet_wrap(~var)
+
+bfi %>%
+  mutate(A = rowMeans(.[c(1:5)], na.rm = TRUE), #dplyr
+         C = rowMeans(.[c(6:10)], na.rm = TRUE),
+         E = rowMeans(.[c(11:15)], na.rm = TRUE),
+         N = rowMeans(.[c(16:20)], na.rm = TRUE),
+         O = rowMeans(.[c(21:25)], na.rm = TRUE)) %>%
+  select(gender, age, education, A, C, E, N, O) %>% #dplyr
+  gather(-gender, -age, -education, key = "var", value = "value") %>% #tidyr
+  ggplot(aes(value)) + #ggplot2
+  geom_histogram(bins = 24) + 
+  facet_grid(gender~var)
+```
+
+## gather and spread
+
+```{r}
+# gather everything in the bfi dataset
+gather(bfi)
+
+# gather everything but the three demographic variables
+gather(bfi, key, value, -age, -gender, -education, )
+
+# gather everything, store into a new dataset, and then spread it back to the original. HINT: You'll likely get an error about duplicate identifiers for rows. Why? Because tidyr (and most of the tidyverse) doesn't like datasets with row names. First, pull out the rownames by doing bfi <- rownames_to_column(bfi) and then make sure you pull out the ID when you gather. 
+bfi %>%
+  rownames_to_column() %>%
+  gather(key, value, -rowname) %>%
+  spread(key, value)
+
+bfi <- rownames_to_column(bfi, var = "ID")
+bfi_gathered <- gather(bfi, key, value, -ID)
+spread(bfi_gathered, key, value)
+```
+
+## unite and separate
+
+```{r}
+# unite age, education, and gender using an underscore and call the new column "pseudoID". 
+bfi %>%
+  unite(pseudoID, age, education, gender, sep = "_")
+
+# unite age, education, and gender using an underscore and call the new column "pseudoID". Then separate that column back. It should be back to the original.
+bfi %>%
+  unite(pseudoID, age, education, gender, sep = "_") %>%
+  separate(pseudoID, c("age", "education", "gender"))
+```
+
+# Putting it all together
+
+```{r}
+# select only the 25 bfi items, and summarise them all (mean, sd, min, max). 
+# HINT: read the summarise_all page on the tidyverse to use the list and purrr commands. 
+# HINT: you'll need to use gather, separate, and spread to rearrange the dataset like you need it!
+bfi %>%
+  select(-age, -gender, -education) %>%
+  summarise_all(list(~mean(.), ~sd(.), ~min(.), ~max(.)), na.rm = TRUE) %>%
+  gather() %>%
+  separate(key, c("var", "fun")) %>%
+  spread(var, value)
+```
+
+
+# janitor
+
+```{r}
+# Create a table of the valid percentage of education. There should be no NA row. 
+# BONUS: How would you round to whole percentages?
+# BONUS: How would you add percentage signs?
+# BONUS: How would you get rid of the `n` column? 
+bfi %>%
+  filter(!is.na(education)) %>%
+  tabyl(education) %>%
+  adorn_pct_formatting() %>%
+  select(-n)
+
+# Create a table of education by gender. Remove NAs. Have total rows and columns. Have both the n and the % (by row) in each cell.
+# BONUS: How would you quickly relabel the `1` and `2` to be Male and Female?
+bfi %>%
+  filter(!is.na(education) & !is.na(gender)) %>%
+  tabyl(education, gender) %>%
+  adorn_totals(c("col", "row")) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  rename(Male = `1`, Female = `2`)
+```
+
+# Bonus/Extra Credit
+
+```{r}
+# Create a table with the n, mean, and frequency of the values for the five items of the Extraversion subscale. Do not include NA values.
+# Hint: you'll need to create multiple tables and combine them!
+# Bonus: Round the Mean to 2 decimal points
+nmean <- 
+  bfi %>%
+  select(E1:E5) %>%
+  gather(Item, Value) %>%
+  group_by(Item) %>%
+  filter(!is.na(Value)) %>%
+  summarise(n = n(),
+            Mean = round(mean(as.numeric(Value), na.rm = TRUE), 2))
+
+freq <-
+  bfi %>%
+  select(E1:E5) %>%
+  gather(Item, Value) %>%
+  filter(!is.na(Value)) %>%
+  tabyl(Item, Value) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting()
+
+full_join(nmean, freq, by = "Item")
+```
+
